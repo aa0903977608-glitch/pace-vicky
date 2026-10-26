@@ -106,6 +106,7 @@
     $('storySpeed').textContent = speed.toFixed(1) + ' km/h';
     $('storyKcal').textContent = Math.round(kcal) + ' kcal';
     $('storyType').textContent = r.demo ? '示範運動' : 'GPS 運動紀錄';
+    renderStoryTrack(r);
   }
 
   function roundedRect(ctx, x, y, width, height, radius) {
@@ -121,6 +122,91 @@
     ctx.lineTo(x, y + r);
     ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
+  }
+
+  function normalizedTrack(r, width, height, padding = 8) {
+    const points = Array.isArray(r.points) ? r.points : [];
+    if (!points.length) return { segments: [], start: null, end: null };
+
+    let latitudeTotal = 0, segmentCount = 0, previousKey;
+    for (let i = 0; i < points.length; i++) {
+      latitudeTotal += points[i].lat;
+      const key = points[i].segment ?? 0;
+      if (i === 0 || key !== previousKey) segmentCount++;
+      previousKey = key;
+    }
+    const selectedIds = segmentCount <= 24
+      ? Array.from({ length: segmentCount }, (_, i) => i)
+      : Array.from({ length: 24 }, (_, i) => Math.round(i * (segmentCount - 1) / 23));
+    const selected = new Set(selectedIds);
+    const ranges = [];
+    let segmentIndex = 0, rangeStart = 0, rangeKey = points[0].segment ?? 0;
+    for (let i = 1; i < points.length; i++) {
+      const key = points[i].segment ?? 0;
+      if (key !== rangeKey) {
+        if (selected.has(segmentIndex)) ranges.push({ start: rangeStart, count: i - rangeStart });
+        segmentIndex++;
+        rangeStart = i;
+        rangeKey = key;
+      }
+    }
+    if (selected.has(segmentIndex)) ranges.push({ start: rangeStart, count: points.length - rangeStart });
+
+    const cosine = Math.max(.01, Math.cos(latitudeTotal / points.length * Math.PI / 180));
+    const pointsPerSegment = Math.max(1, Math.floor(240 / Math.max(1, ranges.length)));
+    const sampled = [];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const range of ranges) {
+      const count = Math.min(range.count, pointsPerSegment), segment = [];
+      for (let i = 0; i < count; i++) {
+        const index = count === 1 ? range.start : range.start + Math.round(i * (range.count - 1) / (count - 1));
+        const p = points[index], x = p.lng * cosine, y = -p.lat;
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+        segment.push({ x, y });
+      }
+      sampled.push(segment);
+    }
+    if (!sampled.length) return { segments: [], start: null, end: null };
+
+    const spanX = maxX - minX, spanY = maxY - minY;
+    const scale = Math.min((width - padding * 2) / Math.max(spanX, .000001), (height - padding * 2) / Math.max(spanY, .000001));
+    const offsetX = (width - spanX * scale) / 2, offsetY = (height - spanY * scale) / 2;
+    const segments = sampled.map(segment => segment.map(p => ({
+      x: offsetX + (p.x - minX) * scale,
+      y: offsetY + (p.y - minY) * scale
+    })));
+    const lastSegment = segments[segments.length - 1];
+    return { segments, start: segments[0][0], end: lastSegment[lastSegment.length - 1] };
+  }
+
+  function renderStoryTrack(r) {
+    const group = $('storyRoutePaths');
+    if (!group) return;
+    group.replaceChildren();
+    const track = normalizedTrack(r, 300, 80, 10);
+    const ns = 'http://www.w3.org/2000/svg';
+    for (const segment of track.segments) {
+      if (segment.length < 2) continue;
+      const values = segment.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+      const outline = document.createElementNS(ns, 'polyline');
+      outline.setAttribute('class', 'track-outline');
+      outline.setAttribute('points', values);
+      group.append(outline);
+      const line = document.createElementNS(ns, 'polyline');
+      line.setAttribute('class', 'track-line');
+      line.setAttribute('points', values);
+      group.append(line);
+    }
+    if (!track.start || !track.end) return;
+    for (const [point, className, radius] of [[track.start, 'track-start', 4.5], [track.end, 'track-end', 5.2]]) {
+      const marker = document.createElementNS(ns, 'circle');
+      marker.setAttribute('class', className);
+      marker.setAttribute('cx', point.x.toFixed(1));
+      marker.setAttribute('cy', point.y.toFixed(1));
+      marker.setAttribute('r', String(radius));
+      group.append(marker);
+    }
   }
 
   async function createStoryImage(r) {
@@ -197,34 +283,52 @@
     ctx.font = '800 34px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillText('KM', left + distanceWidth + 18, distanceY - 10);
 
-    ctx.strokeStyle = '#dfe5f0';
-    ctx.lineWidth = 17;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(left + 8, 935);
-    ctx.bezierCurveTo(205, 930, 185, 852, 300, 867);
-    ctx.bezierCurveTo(405, 878, 413, 968, 524, 932);
-    ctx.bezierCurveTo(635, 896, 625, 853, 720, 874);
-    ctx.bezierCurveTo(805, 894, 808, 962, right - 8, 921);
-    ctx.stroke();
-    ctx.strokeStyle = blue;
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(left + 8, 935);
-    ctx.bezierCurveTo(205, 930, 185, 852, 300, 867);
-    ctx.bezierCurveTo(405, 878, 413, 968, 524, 932);
-    ctx.bezierCurveTo(635, 896, 625, 853, 720, 874);
-    ctx.bezierCurveTo(805, 894, 808, 962, right - 8, 921);
-    ctx.stroke();
+    ctx.fillStyle = muted;
+    ctx.font = '700 18px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('RECORDED TRACK', left, 875);
     ctx.fillStyle = blue;
     ctx.beginPath();
-    ctx.arc(left + 8, 935, 13, 0, Math.PI * 2);
+    ctx.arc(right - 183, 868, 8, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = muted;
+    ctx.font = '600 16px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('起點', right - 168, 874);
     ctx.fillStyle = coral;
     ctx.beginPath();
-    ctx.arc(right - 8, 921, 13, 0, Math.PI * 2);
+    ctx.arc(right - 87, 868, 8, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = muted;
+    ctx.fillText('終點', right - 72, 874);
+
+    const route = normalizedTrack(r, 888, 112, 12), routeTop = 890;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const segment of route.segments) {
+      if (segment.length < 2) continue;
+      ctx.beginPath();
+      segment.forEach((p, index) => {
+        const x = left + p.x, y = routeTop + p.y;
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 16;
+      ctx.stroke();
+      ctx.strokeStyle = blue;
+      ctx.lineWidth = 7;
+      ctx.stroke();
+    }
+    if (route.start && route.end) {
+      for (const [point, color] of [[route.start, blue], [route.end, coral]]) {
+        ctx.beginPath();
+        ctx.arc(left + point.x, routeTop + point.y, 12, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(left + point.x, routeTop + point.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+    }
 
     const tiles = [
       ['運動時間', fmtTime(r.seconds)],
@@ -279,7 +383,7 @@
     const button = $('downloadStoryCard');
     button.disabled = true;
     button.textContent = '正在製作分享卡…';
-    setStatus('正在製作不含路線座標的分享卡。');
+    setStatus('正在製作含軌跡圖形的分享卡（不含 GPS 座標）。');
     try {
       const blob = await createStoryImage(r);
       const time = r.date && !isNaN(new Date(r.date).getTime()) ? new Date(r.date).toISOString().slice(0, 10) : 'record';
