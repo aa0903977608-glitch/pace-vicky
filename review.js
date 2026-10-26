@@ -2,9 +2,15 @@
 (() => {
   const $ = id => document.getElementById(id);
   const MAX_BYTES = 5 * 1024 * 1024;
+  const MAX_STORY_IMAGE_BYTES = 10 * 1024 * 1024;
+  const defaultStoryBackgroundUrl = new URL('assets/campus-run.webp', document.baseURI).href;
   let reviewMap = null;
   let layer = null;
   let activeRecord = null;
+  let storyBackgroundUrl = defaultStoryBackgroundUrl;
+  let storyBackgroundObjectUrl = null;
+  let storyBackgroundFocus = .68;
+  let storyBackgroundLoadToken = 0;
 
   const setStatus = text => { $('status').textContent = text; };
   const isNum = v => typeof v === 'number' && Number.isFinite(v);
@@ -109,6 +115,61 @@
     renderStoryTrack(r);
   }
 
+  function updateStoryTitle() {
+    const title = $('storyTitleInput').value.trim() || '今日運動紀錄';
+    $('storyTitleDisplay').textContent = title;
+  }
+
+  function resetStoryBackground() {
+    storyBackgroundLoadToken++;
+    if (storyBackgroundObjectUrl) URL.revokeObjectURL(storyBackgroundObjectUrl);
+    storyBackgroundObjectUrl = null;
+    storyBackgroundUrl = defaultStoryBackgroundUrl;
+    storyBackgroundFocus = .68;
+    $('storyBackgroundImage').src = storyBackgroundUrl;
+    $('storyBackgroundImage').style.objectPosition = '68% center';
+    $('storyImageInput').value = '';
+    setStatus('已恢復預設背景照片。');
+  }
+
+  function chooseStoryBackground(file) {
+    if (!file) return;
+    if (file.size > MAX_STORY_IMAGE_BYTES) {
+      $('storyImageInput').value = '';
+      setStatus('照片超過 10 MB，請選擇較小的照片。');
+      return;
+    }
+    const supportedType = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+      || (!file.type && /\.(jpe?g|png|webp)$/i.test(file.name));
+    if (!supportedType) {
+      $('storyImageInput').value = '';
+      setStatus('請選擇 JPG、PNG 或 WEBP 格式的照片。');
+      return;
+    }
+
+    const token = ++storyBackgroundLoadToken;
+    const objectUrl = URL.createObjectURL(file);
+    const candidate = new Image();
+    candidate.onload = () => {
+      if (token !== storyBackgroundLoadToken) {
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+      if (storyBackgroundObjectUrl) URL.revokeObjectURL(storyBackgroundObjectUrl);
+      storyBackgroundObjectUrl = objectUrl;
+      storyBackgroundUrl = objectUrl;
+      storyBackgroundFocus = .5;
+      $('storyBackgroundImage').src = objectUrl;
+      $('storyBackgroundImage').style.objectPosition = '50% center';
+      setStatus('背景照片已更新，只會在這台裝置上使用。');
+    };
+    candidate.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      if (token === storyBackgroundLoadToken) setStatus('無法讀取這張照片，請換一張圖片。');
+    };
+    candidate.src = objectUrl;
+  }
+
   function roundedRect(ctx, x, y, width, height, radius) {
     const r = Math.min(radius, width / 2, height / 2);
     ctx.beginPath();
@@ -184,7 +245,7 @@
     const group = $('storyRoutePaths');
     if (!group) return;
     group.replaceChildren();
-    const track = normalizedTrack(r, 300, 80, 10);
+    const track = normalizedTrack(r, 300, 95, 9);
     const ns = 'http://www.w3.org/2000/svg';
     for (const segment of track.segments) {
       if (segment.length < 2) continue;
@@ -214,7 +275,7 @@
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = () => resolve(null);
-      image.src = new URL('assets/campus-run.webp', document.baseURI).href;
+      image.src = storyBackgroundUrl;
       if (image.complete) resolve(image.naturalWidth ? image : null);
     });
   }
@@ -234,7 +295,7 @@
     if (image) {
       const scale = Math.max(width / image.width, height / image.height);
       const imageWidth = image.width * scale, imageHeight = image.height * scale;
-      const focus = .68;
+      const focus = storyBackgroundFocus;
       ctx.drawImage(image, (width - imageWidth) * focus, (height - imageHeight) / 2, imageWidth, imageHeight);
     }
     const leftShade = ctx.createLinearGradient(0, 0, width, 0);
@@ -284,8 +345,14 @@
     ctx.font = '800 23px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillText('CAMPUS MOVEMENT', left, 375);
     ctx.fillStyle = ink;
-    ctx.font = '800 78px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('今日運動紀錄', left, 480);
+    const title = ($('storyTitleInput').value || '').trim() || '今日運動紀錄';
+    let titleFont = 78;
+    ctx.font = '800 ' + titleFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    while (ctx.measureText(title).width > right - left && titleFont > 42) {
+      titleFont -= 4;
+      ctx.font = '800 ' + titleFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    }
+    ctx.fillText(title, left, 480);
     ctx.fillStyle = muted;
     ctx.font = '500 27px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillText('每一步，都是進度。', left, 535);
@@ -325,7 +392,7 @@
     ctx.fillStyle = muted;
     ctx.fillText('終點', right - 72, 874);
 
-    const route = normalizedTrack(r, 888, 112, 12), routeTop = 890;
+    const route = normalizedTrack(r, 888, 150, 10), routeTop = 890;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     for (const segment of route.segments) {
@@ -336,20 +403,20 @@
         if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 16;
+      ctx.lineWidth = 22;
       ctx.stroke();
       ctx.strokeStyle = coral;
-      ctx.lineWidth = 7;
+      ctx.lineWidth = 10;
       ctx.stroke();
     }
     if (route.start && route.end) {
       for (const [point, color] of [[route.start, blue], [route.end, coral]]) {
         ctx.beginPath();
-        ctx.arc(left + point.x, routeTop + point.y, 12, 0, Math.PI * 2);
+        ctx.arc(left + point.x, routeTop + point.y, 15, 0, Math.PI * 2);
         ctx.fillStyle = '#fff';
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(left + point.x, routeTop + point.y, 8, 0, Math.PI * 2);
+        ctx.arc(left + point.x, routeTop + point.y, 10, 0, Math.PI * 2);
         ctx.fillStyle = color;
         ctx.fill();
       }
@@ -361,7 +428,7 @@
       ['平均速度', $('storySpeed').textContent],
       ['估算熱量', $('storyKcal').textContent]
     ];
-    const tileWidth = 426, tileHeight = 165, gap = 36, tileY = 1060;
+    const tileWidth = 426, tileHeight = 165, gap = 36, tileY = 1070;
     tiles.forEach(([label, value], index) => {
       const x = left + (index % 2) * (tileWidth + gap);
       const y = tileY + Math.floor(index / 2) * (tileHeight + 25);
@@ -526,6 +593,10 @@
   }
 
   $('file').addEventListener('change', e => handleFiles(e.target.files));
+  $('storyTitleInput').addEventListener('input', updateStoryTitle);
+  $('storyImageInput').addEventListener('change', e => chooseStoryBackground(e.target.files[0]));
+  $('resetStoryImage').addEventListener('click', resetStoryBackground);
+  updateStoryTitle();
   $('downloadStoryCard').addEventListener('click', () => { if (activeRecord) exportStoryCard(activeRecord); });
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
