@@ -92,29 +92,20 @@
     dl.append(dt, dd);
   }
 
-  function updateStoryCard(r, km, sec, kcal) {
+  function updateStoryCard(r, km, sec, speed, kcal) {
     const date = r.date ? new Date(r.date) : null;
     $('storyDate').textContent = date && !isNaN(date.getTime())
-      ? date.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) + ' · TRAINING JOURNAL'
-      : 'TRAINING JOURNAL';
+      ? date.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')
+      : 'PACE / MOVEMENT LOG';
     $('storyDistance').textContent = km.toFixed(2);
     $('storyTime').textContent = fmtTime(sec);
     const pace = r.meters > 0 && sec > 0 ? Math.round(sec / (r.meters / 1000)) : null;
     $('storyPace').textContent = pace == null
       ? '--:-- / km'
       : String(Math.floor(pace / 60)).padStart(2, '0') + ':' + String(pace % 60).padStart(2, '0') + ' / km';
+    $('storySpeed').textContent = speed.toFixed(1) + ' km/h';
     $('storyKcal').textContent = Math.round(kcal) + ' kcal';
     $('storyType').textContent = r.demo ? '示範運動' : 'GPS 運動紀錄';
-  }
-
-  function loadStoryBackground() {
-    return new Promise(resolve => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => resolve(null);
-      image.src = new URL('assets/campus-run.webp', document.baseURI).href;
-      if (image.complete) resolve(image.naturalWidth ? image : null);
-    });
   }
 
   function roundedRect(ctx, x, y, width, height, radius) {
@@ -140,113 +131,143 @@
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('此瀏覽器無法建立分享圖片。');
 
-    ctx.fillStyle = '#17213a';
+    const ink = '#17213a', muted = '#6b7890', blue = '#405ad9', coral = '#d95432';
+    ctx.fillStyle = '#f2f4fa';
     ctx.fillRect(0, 0, width, height);
-    const image = await loadStoryBackground();
-    if (image) {
-      const scale = Math.max(width / image.width, height / image.height);
-      const imageWidth = image.width * scale, imageHeight = image.height * scale;
-      ctx.drawImage(image, (width - imageWidth) / 2, (height - imageHeight) / 2, imageWidth, imageHeight);
-    }
-    const shade = ctx.createLinearGradient(0, 0, 0, height);
-    shade.addColorStop(0, '#101725a8');
-    shade.addColorStop(.34, '#10172545');
-    shade.addColorStop(.62, '#101725c2');
-    shade.addColorStop(1, '#101725f5');
-    ctx.fillStyle = shade;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.strokeStyle = '#ffffff50';
+    ctx.fillStyle = '#e5eaff';
+    ctx.beginPath();
+    ctx.arc(1045, 480, 235, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffe6df';
+    ctx.beginPath();
+    ctx.arc(48, 1515, 185, 0, Math.PI * 2);
+    ctx.fill();
+    const left = 96, right = width - 96;
+    ctx.strokeStyle = '#dfe5f0';
     ctx.lineWidth = 2;
     roundedRect(ctx, 48, 48, width - 96, height - 96, 35);
     ctx.stroke();
-    const left = 96, right = width - 96;
-    for (let i = 0; i < 5; i++) {
-      roundedRect(ctx, left + i * 177, 74, 166, 5, 3);
-      ctx.fillStyle = '#ffffff9e';
-      ctx.fill();
-    }
 
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = ink;
     ctx.font = '800 34px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('PACE', left, 145);
+    ctx.fillText('PACE', left, 142);
+    ctx.font = '600 20px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillStyle = muted;
+    ctx.fillText('/ MOVEMENT LOG', 220, 142);
     const date = r.date ? new Date(r.date) : null;
     const dateLabel = date && !isNaN(date.getTime())
-      ? date.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) + '  ·  TRAINING JOURNAL'
-      : 'TRAINING JOURNAL';
-    ctx.font = '500 22px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#ffffffd9';
-    ctx.fillText(dateLabel, right, 145, 620);
+      ? date.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')
+      : 'PACE';
+    roundedRect(ctx, 760, 92, 224, 68, 34);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#dfe5f0';
+    ctx.stroke();
+    ctx.font = '700 21px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = blue;
+    ctx.fillText(dateLabel, 872, 135, 194);
     ctx.textAlign = 'left';
 
-    ctx.fillStyle = '#ffffffd9';
-    ctx.font = '600 25px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('PACE  /  TRAINING JOURNAL', left, 565);
-    ctx.fillStyle = '#fff';
-    ctx.font = '800 68px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('今天的每一步', left, 660);
+    ctx.fillStyle = coral;
+    ctx.font = '800 23px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('DAILY MOVEMENT / 01', left, 375);
+    ctx.fillStyle = ink;
+    ctx.font = '800 78px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('今日累積', left, 480);
+    ctx.fillStyle = muted;
+    ctx.font = '500 27px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('每一步，都是進度。', left, 535);
+    ctx.fillStyle = blue;
+    ctx.font = '800 20px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('DISTANCE', left, 645);
 
     const distanceText = (r.meters / 1000).toFixed(2);
     let distanceFont = 178;
-    ctx.font = '500 ' + distanceFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.font = '750 ' + distanceFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     while (ctx.measureText(distanceText).width > 760 && distanceFont > 100) {
       distanceFont -= 8;
-      ctx.font = '500 ' + distanceFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+      ctx.font = '750 ' + distanceFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     }
     const distanceWidth = ctx.measureText(distanceText).width;
-    const distanceY = 865;
-    ctx.fillStyle = '#fff';
+    const distanceY = 790;
+    ctx.fillStyle = ink;
     ctx.fillText(distanceText, left, distanceY);
-    ctx.fillStyle = '#ffafc2';
-    ctx.font = '800 36px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('KM', left + distanceWidth + 20, distanceY - 8);
-    ctx.fillStyle = '#ffffffd9';
-    ctx.font = '500 22px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('ONE STEP CLOSER TO YOURSELF.', left + 4, 925);
+    ctx.fillStyle = coral;
+    ctx.font = '800 34px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('KM', left + distanceWidth + 18, distanceY - 10);
 
-    const panelX = 96, panelY = 1115, panelWidth = 888, panelHeight = 480;
-    roundedRect(ctx, panelX, panelY, panelWidth, panelHeight, 34);
-    ctx.fillStyle = '#08101dcc';
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff55';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#dfe5f0';
+    ctx.lineWidth = 17;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(left + 8, 935);
+    ctx.bezierCurveTo(205, 930, 185, 852, 300, 867);
+    ctx.bezierCurveTo(405, 878, 413, 968, 524, 932);
+    ctx.bezierCurveTo(635, 896, 625, 853, 720, 874);
+    ctx.bezierCurveTo(805, 894, 808, 962, right - 8, 921);
     ctx.stroke();
-    const rows = [
+    ctx.strokeStyle = blue;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(left + 8, 935);
+    ctx.bezierCurveTo(205, 930, 185, 852, 300, 867);
+    ctx.bezierCurveTo(405, 878, 413, 968, 524, 932);
+    ctx.bezierCurveTo(635, 896, 625, 853, 720, 874);
+    ctx.bezierCurveTo(805, 894, 808, 962, right - 8, 921);
+    ctx.stroke();
+    ctx.fillStyle = blue;
+    ctx.beginPath();
+    ctx.arc(left + 8, 935, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = coral;
+    ctx.beginPath();
+    ctx.arc(right - 8, 921, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    const tiles = [
       ['運動時間', fmtTime(r.seconds)],
       ['平均配速', $('storyPace').textContent],
+      ['平均速度', $('storySpeed').textContent],
       ['估算熱量', $('storyKcal').textContent]
     ];
-    rows.forEach(([label, value], index) => {
-      const rowY = panelY + 105 + index * 138;
-      if (index) {
-        ctx.strokeStyle = '#ffffff35';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(panelX + 42, rowY - 47);
-        ctx.lineTo(panelX + panelWidth - 42, rowY - 47);
-        ctx.stroke();
-      }
-      ctx.font = '500 25px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-      ctx.fillStyle = '#ffffffa8';
-      ctx.fillText(label, panelX + 42, rowY);
-      ctx.font = '600 34px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    const tileWidth = 426, tileHeight = 165, gap = 36, tileY = 1060;
+    tiles.forEach(([label, value], index) => {
+      const x = left + (index % 2) * (tileWidth + gap);
+      const y = tileY + Math.floor(index / 2) * (tileHeight + 25);
+      roundedRect(ctx, x, y, tileWidth, tileHeight, 24);
       ctx.fillStyle = '#fff';
-      ctx.textAlign = 'right';
-      ctx.fillText(value, panelX + panelWidth - 42, rowY, 500);
-      ctx.textAlign = 'left';
+      ctx.fill();
+      ctx.strokeStyle = '#dfe5f0';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = coral;
+      ctx.fillRect(x + 24, y + 27, 8, 34);
+      ctx.fillStyle = muted;
+      ctx.font = '600 22px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+      ctx.fillText(label, x + 50, y + 52);
+      ctx.fillStyle = ink;
+      ctx.font = '800 31px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+      ctx.fillText(value, x + 25, y + 118, tileWidth - 50);
     });
 
-    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#dfe5f0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(left, 1512);
+    ctx.lineTo(right, 1512);
+    ctx.stroke();
+    ctx.fillStyle = ink;
     ctx.font = '800 27px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('PACE', left, 1745);
-    ctx.font = '500 21px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillStyle = '#ffffffc9';
-    ctx.fillText(r.demo ? '示範運動紀錄' : '校園 GPS 運動紀錄', left + 130, 1745);
-    ctx.fillStyle = '#ffafc2';
-    ctx.font = '600 17px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('PACE', left, 1582);
+    ctx.font = '500 20px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillStyle = muted;
+    ctx.fillText(r.demo ? '示範運動紀錄' : '校園 GPS 運動紀錄', left + 130, 1582);
+    ctx.fillStyle = coral;
+    ctx.font = '700 17px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText('MOVE WITH INTENTION', right, 1745);
+    ctx.fillText('MOVE AT YOUR OWN PACE', right, 1582);
     ctx.textAlign = 'left';
 
     return new Promise((resolve, reject) => {
@@ -299,7 +320,7 @@
     $('statTime').textContent = fmtTime(sec);
     $('statSpeed').textContent = speed.toFixed(1);
     $('statKcal').textContent = String(Math.round(kcal));
-    updateStoryCard(r, km, sec, kcal);
+    updateStoryCard(r, km, sec, speed, kcal);
 
     const dl = $('facts');
     dl.replaceChildren();
