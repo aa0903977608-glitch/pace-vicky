@@ -35,11 +35,78 @@ $('pause').onclick=()=>{if(session.state==='running')pause();else {message('等�
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(records));storageOK=true;}catch{storageOK=false;message('裝置儲存空間不足或儲存被封鎖。紀錄暫留本頁，請先匯出 CSV 再離開。');}}
 $('finish').onclick=()=>{if(!session||session.state==='finished')return;session.seconds=seconds();session.runStart=0;session.state='finished';stopWatch();session.kcal=MoveCore.calories(session.met,session.weight,session.seconds);records.unshift({...session,points:[...session.points],target:target?{lat:target.lat,lng:target.lng}:null});persist();renderHistory();render();$('badge').textContent='● 運動已結束';if(storageOK)message(`已儲存${session.demo?'示範':''}紀錄：${(session.meters/1000).toFixed(2)} km，${fmt(session.seconds)}。可匯出摘要或 GPS 軌跡。`);};
 function download(name,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+async function shareOrDownload(name,body,type,title){
+  if(typeof File==='function'&&navigator.share&&navigator.canShare){
+    try{
+      const file=new File([body],name,{type});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title,text:'檔案包含 GPS 軌跡與時間資料，請留意分享對象。'});
+        return;
+      }
+    }catch(error){if(error?.name==='AbortError')return;}
+  }
+  download(name,body,type);
+}
+function trackFileName(record,extension){const time=Date.parse(record.date),date=Number.isFinite(time)?new Date(time).toISOString().slice(0,10):'track';return `campus-track-${date}.${extension}`;}
+function exportTrackJSON(record){shareOrDownload(trackFileName(record,'json'),JSON.stringify(record,null,2),'application/json','PACE JSON 軌跡');}
 function cell(v){let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}
 function exportCSV(items){if(!items.length){message('目前沒有可匯出的紀錄。');return;}const rows=[['時間 ISO','課堂代號','類型','活動','身高 cm','體重 kg','年齡','時間 sec','距離 m','總熱量 kcal','有效 GPS 點'],...items.map(r=>[r.date,r.alias,r.demo?'示範':'GPS',r.mode,r.height,r.weight,r.age,Math.round(r.seconds),r.meters.toFixed(1),r.kcal.toFixed(1),r.points.length])];download('campus-move.csv','\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
+function xmlText(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;');}
+function exportGPX(record){
+  const points=Array.isArray(record.points)?record.points:[];
+  if(!points.length){message('這筆紀錄沒有可匯出的 GPS 軌跡。');return;}
+  const segments=[];let current=null,currentId;
+  for(const p of points){
+    if(!Number.isFinite(p.lat)||!Number.isFinite(p.lng)){current=null;currentId=undefined;continue;}
+    const id=p.segment??0;
+    if(!current||id!==currentId){current=[];segments.push(current);currentId=id;}
+    current.push(p);
+  }
+  const trackName=xmlText(record.alias||record.mode||'PACE 運動紀錄');
+  const trackSegments=segments.map(segment=>`    <trkseg>\n${segment.map(p=>{
+    const date=Number.isFinite(p.t)?new Date(p.t):null;
+    const time=date&&Number.isFinite(date.getTime())?`<time>${date.toISOString()}</time>`:'';
+    return `      <trkpt lat="${p.lat.toFixed(7)}" lon="${p.lng.toFixed(7)}">${time}</trkpt>`;
+  }).join('\n')}\n    </trkseg>`).join('\n');
+  const body=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="PACE 校園運動資料工作室" xmlns="http://www.topografix.com/GPX/1/1">\n  <trk>\n    <name>${trackName}</name>\n${trackSegments}\n  </trk>\n</gpx>\n`;
+  shareOrDownload(trackFileName(record,'gpx'),body,'application/gpx+xml;charset=utf-8','PACE GPX 軌跡');
+}
 let historyFilter='all';
-function routeThumbnail(r){const box=document.createElement('div');box.className='route-thumb';const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 100 67');svg.setAttribute('aria-label','此筆運動軌跡縮圖');const ps=r.points||[];if(ps.length>1){const xs=ps.map(p=>p.lng),ys=ps.map(p=>p.lat),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);const scale=Math.min(76/Math.max(maxX-minX,.00001),43/Math.max(maxY-minY,.00001));const groups=new Map();for(const p of ps){const k=p.segment||0;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(`${50+(p.lng-(minX+maxX)/2)*scale},${33.5-(p.lat-(minY+maxY)/2)*scale}`);}for(const points of groups.values()){const poly=document.createElementNS(ns,'polyline');poly.setAttribute('points',points.join(' '));poly.setAttribute('fill','none');svg.append(poly);}}else{const t=document.createElementNS(ns,'text');t.setAttribute('x','50');t.setAttribute('y','38');t.setAttribute('text-anchor','middle');t.setAttribute('stroke','none');t.setAttribute('fill','#9aa987');t.setAttribute('font-size','9');t.textContent='尚無軌跡';svg.append(t);}box.append(svg);return box;}
-function renderHistory(){const root=$('records');root.replaceChildren();const actual=records.filter(r=>!r.demo);$('historyTotal').textContent=actual.length?`${actual.length} 次運動 · ${(actual.reduce((s,r)=>s+r.meters,0)/1000).toFixed(2)} km`:'尚無 GPS 運動紀錄';const shown=records.filter(r=>historyFilter==='all'||(historyFilter==='demo'?r.demo:!r.demo));if(!shown.length){root.innerHTML='<div class="empty"><div class="empty-art"><svg><use href="#i-route"/></svg></div><div><h3>從第一段路，開始累積。</h3><p>完成運動後，你的距離、時間與軌跡會留在這裡。</p></div></div>';return;}shown.forEach(r=>{const row=document.createElement('div');row.className='record';row.append(routeThumbnail(r));const info=document.createElement('div'),title=document.createElement('strong'),sub=document.createElement('small');title.textContent=`${r.demo?'示範 · ':''}${r.alias||r.mode.split(' · ')[0]}`;sub.textContent=new Date(r.date).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});info.append(title,sub);row.append(info);const stats=document.createElement('div');stats.className='record-stats';for(const [value,label]of [[(r.meters/1000).toFixed(2),'公里'],[fmt(r.seconds),'運動時間']]){const item=document.createElement('span');item.textContent=value;const unit=document.createElement('small');unit.textContent=label;item.append(unit);stats.append(item);}row.append(stats);const actions=document.createElement('div');actions.className='record-actions';for(const [label,handler]of [...(!r.demo?[['繳交',()=>window.PaceSubmit?.(r)]]:[]),['摘要',()=>exportCSV([r])],['軌跡',()=>download('campus-track.json',JSON.stringify(r,null,2),'application/json')],['刪除',()=>{if(confirm('刪除此筆運動紀錄？')){records=records.filter(x=>x.id!==r.id);persist();renderHistory();}}]]){const button=document.createElement('button');button.textContent=label;button.onclick=handler;if(label==='繳交')button.dataset.cloudOnly='';actions.append(button);}row.append(actions);root.append(row);});}
+function routeThumbnail(r){
+  const box=document.createElement('div');box.className='route-thumb';
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 100 67');svg.setAttribute('aria-label','此筆運動軌跡縮圖');
+  const ps=Array.isArray(r.points)?r.points:[];
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  const segments=[];let segmentKey,segment;
+  for(let i=0;i<ps.length;i++){
+    const p=ps[i];
+    if(!Number.isFinite(p.lat)||!Number.isFinite(p.lng)){segment=null;segmentKey=undefined;continue;}
+    minX=Math.min(minX,p.lng);maxX=Math.max(maxX,p.lng);minY=Math.min(minY,p.lat);maxY=Math.max(maxY,p.lat);
+    const key=p.segment??0;
+    if(!segment||key!==segmentKey){segment={start:i,end:i+1,count:1};segments.push(segment);segmentKey=key;}
+    else{segment.end=i+1;segment.count++;}
+  }
+  const drawable=segments.filter(item=>item.count>1);
+  if(drawable.length){
+    const maxPoints=240,maxSegments=60;
+    const selected=drawable.length<=maxSegments?drawable:Array.from({length:maxSegments},(_,i)=>drawable[Math.round(i*(drawable.length-1)/(maxSegments-1))]);
+    const pointsPerSegment=Math.max(2,Math.floor(maxPoints/selected.length));
+    const scale=Math.min(76/Math.max(maxX-minX,.00001),43/Math.max(maxY-minY,.00001));
+    for(const item of selected){
+      const sampleCount=Math.min(item.count,pointsPerSegment),points=[];
+      for(let i=0;i<sampleCount;i++){
+        const index=item.start+Math.round(i*(item.count-1)/(sampleCount-1)),p=ps[index];
+        points.push(`${50+(p.lng-(minX+maxX)/2)*scale},${33.5-(p.lat-(minY+maxY)/2)*scale}`);
+      }
+      const poly=document.createElementNS(ns,'polyline');poly.setAttribute('points',points.join(' '));poly.setAttribute('fill','none');svg.append(poly);
+    }
+  }else{
+    const t=document.createElementNS(ns,'text');t.setAttribute('x','50');t.setAttribute('y','38');t.setAttribute('text-anchor','middle');t.setAttribute('stroke','none');t.setAttribute('fill','#9aa987');t.setAttribute('font-size','9');t.textContent='尚無軌跡';svg.append(t);
+  }
+  box.append(svg);return box;
+}
+function renderHistory(){const root=$('records');root.replaceChildren();const actual=records.filter(r=>!r.demo);$('historyTotal').textContent=actual.length?`${actual.length} 次運動 · ${(actual.reduce((s,r)=>s+r.meters,0)/1000).toFixed(2)} km`:'尚無 GPS 運動紀錄';const shown=records.filter(r=>historyFilter==='all'||(historyFilter==='demo'?r.demo:!r.demo));if(!shown.length){root.innerHTML='<div class="empty"><div class="empty-art"><svg><use href="#i-route"/></svg></div><div><h3>從第一段路，開始累積。</h3><p>完成運動後，你的距離、時間與軌跡會留在這裡。</p></div></div>';return;}shown.forEach(r=>{const row=document.createElement('div');row.className='record';row.append(routeThumbnail(r));const info=document.createElement('div'),title=document.createElement('strong'),sub=document.createElement('small');title.textContent=`${r.demo?'示範 · ':''}${r.alias||r.mode.split(' · ')[0]}`;sub.textContent=new Date(r.date).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});info.append(title,sub);row.append(info);const stats=document.createElement('div');stats.className='record-stats';for(const [value,label]of [[(r.meters/1000).toFixed(2),'公里'],[fmt(r.seconds),'運動時間']]){const item=document.createElement('span');item.textContent=value;const unit=document.createElement('small');unit.textContent=label;item.append(unit);stats.append(item);}row.append(stats);const actions=document.createElement('div');actions.className='record-actions';for(const [label,handler]of [...(!r.demo?[['繳交',()=>window.PaceSubmit?.(r)]]:[]),['摘要',()=>exportCSV([r])],['JSON',()=>exportTrackJSON(r)],['GPX',()=>exportGPX(r)],['刪除',()=>{if(confirm('刪除此筆運動紀錄？')){records=records.filter(x=>x.id!==r.id);persist();renderHistory();}}]]){const button=document.createElement('button');button.textContent=label;button.onclick=handler;if(label==='繳交')button.dataset.cloudOnly='';actions.append(button);}row.append(actions);root.append(row);});}
 $('openSetup').onclick=()=>$('setupDialog').showModal();$('closeSetup').onclick=()=>$('setupDialog').close();$('energyInfo').onclick=()=>$('energyDialog').showModal();$('closeEnergy').onclick=()=>$('energyDialog').close();
 $('todayDate').textContent=new Date().toLocaleDateString('zh-TW',{month:'long',day:'numeric',weekday:'short'});
 document.querySelectorAll('[data-filter]').forEach(button=>button.onclick=()=>{historyFilter=button.dataset.filter;document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});renderHistory();});
@@ -50,3 +117,75 @@ setInterval(()=>{if(session?.state==='running'&&!session.demo&&Date.now()-lastSi
 renderHistory();render();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 
 document.querySelectorAll('.sidenav a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.sidenav a').forEach(n=>n.classList.toggle('active',n===a));document.querySelector('.breadcrumb strong').textContent=a.textContent.trim();}));
+
+const presentationToggle=$('presentationToggle');
+if(presentationToggle)presentationToggle.onclick=()=>{
+  const active=document.body.classList.toggle('presentation-mode');
+  presentationToggle.setAttribute('aria-pressed',String(active));
+  presentationToggle.textContent=active?'離開展示':'簡報展示';
+  $('presentationNote').hidden=!active;
+  if(active)window.scrollTo({top:0,behavior:'smooth'});
+};
+
+const REPORT_PROFILE_KEY='pace-presentation-profile-v1';
+const THEME_NAMES=['ocean','sunset','forest','violet','custom'];
+const THEME_ACCENTS={ocean:'#ff684f',sunset:'#ffb24d',forest:'#55d6a0',violet:'#c29bff'};
+let reportProfile={theme:'ocean',accent:THEME_ACCENTS.ocean,name:''};
+try{
+  const saved=JSON.parse(localStorage.getItem(REPORT_PROFILE_KEY)||'{}');
+  if(THEME_NAMES.includes(saved.theme))reportProfile.theme=saved.theme;
+  if(typeof saved.accent==='string'&&/^#[0-9a-f]{6}$/i.test(saved.accent))reportProfile.accent=saved.accent;
+  if(typeof saved.name==='string')reportProfile.name=saved.name.trim().slice(0,30);
+}catch{}
+function colorParts(hex){const n=parseInt(hex.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255];}
+function colorHex(parts){return '#'+parts.map(n=>Math.round(n).toString(16).padStart(2,'0')).join('');}
+function shadeColor(hex,factor){return colorHex(colorParts(hex).map(n=>n*factor));}
+function tintColor(hex,amount){return colorHex(colorParts(hex).map(n=>n+(255-n)*amount));}
+function accentTextColor(hex){const [r,g,b]=colorParts(hex);return (0.2126*r+0.7152*g+0.0722*b)/255>0.55?'#111a32':'#fff';}
+function applySiteTheme(){
+  document.body.dataset.theme=reportProfile.theme;
+  if(reportProfile.theme==='custom'){
+    const accent=reportProfile.accent;
+    document.body.style.setProperty('--custom-accent',accent);
+    document.body.style.setProperty('--custom-accent-strong',shadeColor(accent,.82));
+    document.body.style.setProperty('--custom-accent-ink',shadeColor(accent,.58));
+    document.body.style.setProperty('--custom-accent-tint',tintColor(accent,.9));
+    document.body.style.setProperty('--custom-accent-soft',tintColor(accent,.84));
+    document.body.style.setProperty('--custom-on-accent',accentTextColor(accent));
+  }else{
+    for(const key of ['--custom-accent','--custom-accent-strong','--custom-accent-ink','--custom-accent-tint','--custom-accent-soft','--custom-on-accent'])document.body.style.removeProperty(key);
+  }
+  const routeColor=getComputedStyle(document.body).getPropertyValue('--theme-accent').trim();
+  if(route&&routeColor)route.setStyle({color:routeColor});
+}
+function renderReportProfile(){
+  $('reporterNameDisplay').textContent=reportProfile.name;
+  $('reporterByline').hidden=!reportProfile.name;
+  applySiteTheme();
+}
+renderReportProfile();
+$('openReportSettings').onclick=()=>{
+  $('siteThemeInput').value=reportProfile.theme;
+  $('customAccentInput').value=reportProfile.accent;
+  $('customAccentLabel').hidden=reportProfile.theme!=='custom';
+  $('presenterNameInput').value=reportProfile.name;
+  $('reportSettingsStatus').textContent='';
+  $('reportSettingsDialog').showModal();
+};
+$('siteThemeInput').onchange=()=>{
+  const theme=$('siteThemeInput').value;
+  $('customAccentLabel').hidden=theme!=='custom';
+  if(THEME_ACCENTS[theme])$('customAccentInput').value=THEME_ACCENTS[theme];
+};
+$('closeReportSettings').onclick=()=>$('reportSettingsDialog').close();
+$('reportSettingsForm').onsubmit=e=>{
+  e.preventDefault();
+  reportProfile={theme:$('siteThemeInput').value,accent:$('customAccentInput').value,name:$('presenterNameInput').value.trim().slice(0,30)};
+  renderReportProfile();
+  try{
+    localStorage.setItem(REPORT_PROFILE_KEY,JSON.stringify(reportProfile));
+    $('reportSettingsDialog').close();
+  }catch{
+    $('reportSettingsStatus').textContent='已套用本次設定，但瀏覽器無法儲存到這台裝置。';
+  }
+};
