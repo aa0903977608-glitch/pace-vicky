@@ -245,7 +245,7 @@
     const group = $('storyRoutePaths');
     if (!group) return;
     group.replaceChildren();
-    const track = normalizedTrack(r, 300, 95, 9);
+    const track = normalizedTrack(r, 300, 190, 8);
     const ns = 'http://www.w3.org/2000/svg';
     for (const segment of track.segments) {
       if (segment.length < 2) continue;
@@ -392,7 +392,7 @@
     ctx.fillStyle = muted;
     ctx.fillText('終點', right - 72, 874);
 
-    const route = normalizedTrack(r, 888, 150, 10), routeTop = 890;
+    const route = normalizedTrack(r, 888, 370, 10), routeTop = 890;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     for (const segment of route.segments) {
@@ -428,7 +428,7 @@
       ['平均速度', $('storySpeed').textContent],
       ['估算熱量', $('storyKcal').textContent]
     ];
-    const tileWidth = 426, tileHeight = 165, gap = 36, tileY = 1070;
+    const tileWidth = 426, tileHeight = 165, gap = 36, tileY = 1300;
     tiles.forEach(([label, value], index) => {
       const x = left + (index % 2) * (tileWidth + gap);
       const y = tileY + Math.floor(index / 2) * (tileHeight + 25);
@@ -451,19 +451,19 @@
     ctx.strokeStyle = '#ffffff70';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(left, 1512);
-    ctx.lineTo(right, 1512);
+    ctx.moveTo(left, 1700);
+    ctx.lineTo(right, 1700);
     ctx.stroke();
     ctx.fillStyle = ink;
     ctx.font = '800 27px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('PACE', left, 1582);
+    ctx.fillText('PACE', left, 1770);
     ctx.font = '500 20px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillStyle = muted;
-    ctx.fillText(r.demo ? '示範運動紀錄' : '校園 GPS 運動紀錄', left + 130, 1582);
+    ctx.fillText(r.demo ? '示範運動紀錄' : '校園 GPS 運動紀錄', left + 130, 1770);
     ctx.fillStyle = coral;
     ctx.font = '700 17px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText('MOVE AT YOUR OWN PACE', right, 1582);
+    ctx.fillText('MOVE AT YOUR OWN PACE', right, 1770);
     ctx.textAlign = 'left';
 
     return new Promise((resolve, reject) => {
