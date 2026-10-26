@@ -1,4 +1,4 @@
-const CACHE='campus-move-v18';
+const CACHE='campus-move-v19';
 // Resolve every asset against the service worker's own scope, so the app works at / and at a subpath such as /pace-site/.
 const SCOPE=self.registration.scope;
 const ASSETS=['./','index.html','style.css','document.css','classroom.css','core.js','app.js','cloud-upload.js','mode.js','tiles.js','review.html','review.js','handout.html','guide.html','icon.svg','manifest.webmanifest','vendor/leaflet.js','vendor/leaflet.css'];

@@ -323,9 +323,6 @@
     ctx.fillStyle = ink;
     ctx.font = '800 34px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillText('PACE', left, 142);
-    ctx.font = '600 20px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillStyle = muted;
-    ctx.fillText('/ CAMPUS MOVEMENT', 220, 142);
     const date = r.date ? new Date(r.date) : null;
     const dateLabel = date && !isNaN(date.getTime())
       ? date.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')
