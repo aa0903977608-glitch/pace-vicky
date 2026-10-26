@@ -37,6 +37,37 @@ button,a,input{-webkit-tap-highlight-color:transparent}
 .report-head p{color:var(--report-muted);font-size:12px;margin:5px 0 0}
 .print-button{flex:0 0 auto;border:0;border-radius:9px;background:var(--report-accent);color:#fff;padding:10px 14px;font-weight:750;cursor:pointer}
 .print-button:hover{background:#e9523b}
+.story-export{display:grid;grid-template-columns:minmax(0,360px) minmax(220px,1fr);align-items:center;justify-content:center;gap:26px;margin:22px 0 26px}
+.story-card{position:relative;isolation:isolate;width:100%;max-width:360px;aspect-ratio:9/16;margin:0 auto;overflow:hidden;border:1px solid #ffffff55;border-radius:25px;background:#111827;color:#fff;box-shadow:0 18px 45px #17213a25}
+.story-image{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.75)}
+.story-card::after{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(180deg,#10172555 0%,#10172522 27%,#1017257a 52%,#101725f2 100%)}
+.story-frame{position:absolute;z-index:1;inset:14px;border:1px solid #ffffff35;border-radius:18px;pointer-events:none}
+.story-content{position:relative;z-index:2;display:flex;height:100%;flex-direction:column;justify-content:space-between;padding:25px 23px 22px}
+.story-progress{display:flex;gap:4px;margin-bottom:17px}
+.story-progress i{height:3px;flex:1;border-radius:9px;background:#ffffff9c}
+.story-topline{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#ffffffd9}
+.story-logo{font-size:17px;font-weight:900;letter-spacing:.16em;color:#fff}
+.story-hero{margin:auto 0 22px;padding-top:32px}
+.story-kicker{font-size:9px;letter-spacing:.16em;color:#ffffffc9;margin:0 0 13px}
+.story-title{font-size:clamp(23px,6vw,31px);font-weight:800;letter-spacing:-.04em;line-height:1.35;margin:0 0 14px}
+.story-distance{display:flex;align-items:baseline;gap:7px;margin:0;color:#fff}
+.story-distance strong{font-size:clamp(64px,17vw,94px);line-height:1;font-weight:500;letter-spacing:.035em;font-variant-numeric:tabular-nums}
+.story-distance span{font-size:16px;font-weight:800;color:#ffafc2}
+.story-tagline{font-size:9px;letter-spacing:.09em;color:#ffffffd1;margin:12px 0 0}
+.story-stat-panel{padding:12px 15px;border:1px solid #ffffff4d;border-radius:16px;background:#080e19b8;backdrop-filter:blur(8px)}
+.story-stat-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #ffffff30}
+.story-stat-row:last-child{border-bottom:0}
+.story-stat-row span{font-size:10px;color:#ffffffa8}
+.story-stat-row strong{font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;text-align:right}
+.story-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:18px 1px 0;color:#ffffffcc;font-size:9px}
+.story-footer strong{font-size:12px;letter-spacing:.12em;color:#fff}
+.story-tools{max-width:310px}
+.story-tools h3{font-size:18px;letter-spacing:-.02em;margin:5px 0 9px}
+.story-tools p{font-size:12px;line-height:1.8;color:var(--report-muted);margin:0 0 14px}
+.story-share-button{border:0;border-radius:10px;background:var(--report-ink);color:#fff;padding:12px 15px;font-weight:750;cursor:pointer}
+.story-share-button:hover{background:#2c3b60}
+.story-share-button:disabled{opacity:.65;cursor:wait}
+.story-tools .story-privacy{margin-top:11px;font-size:11px}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .stats div{min-width:0;background:#f6f7fb;border:1px solid #edf0f6;border-radius:13px;padding:15px 16px}
 .stats span{display:block;color:var(--report-muted);font-size:12px;margin-bottom:3px}
@@ -53,9 +84,9 @@ table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
 th,td{border-bottom:1px solid var(--report-line);padding:10px 9px;text-align:left;white-space:nowrap}
 th{color:var(--report-muted);font-weight:700;background:#f7f8fb}
 .table-wrap{overflow-x:auto;border:1px solid var(--report-line);border-radius:10px}
-@media(max-width:700px){.review{padding:14px 14px 42px}.rtop{margin-bottom:24px;padding:12px 14px}.rtop nav{width:100%;gap:2px}.rtop nav a{padding:7px 9px;font-size:12px}.page-intro{display:block}.local-badge{display:inline-block;margin-top:13px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:16px;border-radius:15px}.report-head{align-items:flex-start}.report-head h2{font-size:19px}.print-button{font-size:12px;padding:9px 10px}#reviewMap{height:340px}dl{grid-template-columns:minmax(120px,.7fr) minmax(0,1.3fr);font-size:12px}dt,dd{padding:10px 9px}}
-@media(max-width:430px){.report-head{display:block}.print-button{margin-top:12px}.stats div{padding:12px}.stats span{font-size:11px}#reviewMap{height:300px}}
-@media print{body{background:#fff;color:#111;font-size:10pt}.review{max-width:none;padding:0}.rtop,.page-intro,.drop,#status,.noprint{display:none!important}.card{box-shadow:none;border:0;border-radius:0;padding:0;margin:0 0 12mm}#reviewMap{height:120mm;break-inside:avoid}.stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:5mm}.stats div{background:#f3f5fa!important;border:1px solid #dfe5f0;print-color-adjust:exact}.report-head{margin-bottom:8mm}dl{grid-template-columns:42mm 1fr;font-size:9pt}.note{font-size:9pt}.table-wrap{overflow:visible}table{font-size:8.5pt}th,td{white-space:normal;padding:2.5mm 2mm}@page{size:A4;margin:14mm}}
+@media(max-width:700px){.review{padding:14px 14px 42px}.rtop{margin-bottom:24px;padding:12px 14px}.rtop nav{width:100%;gap:2px}.rtop nav a{padding:7px 9px;font-size:12px}.page-intro{display:block}.local-badge{display:inline-block;margin-top:13px}.story-export{grid-template-columns:1fr;gap:17px}.story-card{width:min(100%,340px)}.story-tools{max-width:none;text-align:center}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:16px;border-radius:15px}.report-head{align-items:flex-start}.report-head h2{font-size:19px}.print-button{font-size:12px;padding:9px 10px}#reviewMap{height:340px}dl{grid-template-columns:minmax(120px,.7fr) minmax(0,1.3fr);font-size:12px}dt,dd{padding:10px 9px}}
+@media(max-width:430px){.report-head{display:block}.print-button{margin-top:12px}.stats div{padding:12px}.stats span{font-size:11px}#reviewMap{height:300px}.story-card{border-radius:20px}.story-content{padding:23px 21px 20px}}
+@media print{body{background:#fff;color:#111;font-size:10pt}.review{max-width:none;padding:0}.rtop,.page-intro,.drop,#status,.noprint,.story-tools{display:none!important}.card{box-shadow:none;border:0;border-radius:0;padding:0;margin:0 0 12mm}#reviewMap{height:120mm;break-inside:avoid}.story-export{display:block;margin:0 auto 10mm}.story-card{width:70mm;max-width:70mm;height:124.4mm;border-radius:4mm;print-color-adjust:exact}.story-image,.story-card::after{print-color-adjust:exact}.story-content{padding:8mm 6mm 6mm}.story-distance strong{font-size:22pt}.story-title{font-size:13pt}.story-stat-panel{padding:3mm}.story-stat-row{padding:2.6mm 0}.story-stat-row strong{font-size:8pt}.stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:5mm}.stats div{background:#f3f5fa!important;border:1px solid #dfe5f0;print-color-adjust:exact}.report-head{margin-bottom:8mm}dl{grid-template-columns:42mm 1fr;font-size:9pt}.note{font-size:9pt}.table-wrap{overflow:visible}table{font-size:8.5pt}th,td{white-space:normal;padding:2.5mm 2mm}@page{size:A4;margin:14mm}}
 </style>
 </head>
 <body>
@@ -78,6 +109,23 @@ th{color:var(--report-muted);font-weight:700;background:#f7f8fb}
 
 <section class="card" id="detail" hidden>
   <div class="report-head"><div><p class="eyebrow">SESSION REPORT</p><h2>運動摘要與軌跡</h2><p>依照匯入檔案整理的運動數據</p></div><button class="print-button noprint" type="button" onclick="window.print()">列印／另存 PDF</button></div>
+  <section class="story-export" aria-labelledby="storyHeading">
+    <div class="story-card" id="storyCard">
+      <img class="story-image" src="assets/campus-run.webp" alt="">
+      <div class="story-frame" aria-hidden="true"></div>
+      <div class="story-content">
+        <div><div class="story-progress" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="story-topline"><strong class="story-logo">PACE</strong><span id="storyDate">TRAINING JOURNAL</span></div></div>
+        <div class="story-hero"><p class="story-kicker">PACE / TRAINING JOURNAL</p><h3 class="story-title">今天的每一步</h3><p class="story-distance"><strong id="storyDistance">0.00</strong><span>KM</span></p><p class="story-tagline">ONE STEP CLOSER TO YOURSELF.</p></div>
+        <div class="story-stat-panel" aria-label="分享卡摘要數據">
+          <div class="story-stat-row"><span>運動時間</span><strong id="storyTime">00:00</strong></div>
+          <div class="story-stat-row"><span>平均配速</span><strong id="storyPace">--:-- / km</strong></div>
+          <div class="story-stat-row"><span>估算熱量</span><strong id="storyKcal">0 kcal</strong></div>
+        </div>
+        <div class="story-footer"><strong>PACE</strong><span>校園運動紀錄</span><span id="storyType">GPS TRAINING</span></div>
+      </div>
+    </div>
+    <div class="story-tools"><p class="eyebrow">SHAREABLE SUMMARY</p><h3 id="storyHeading">限時動態分享卡</h3><p>以 9:16 直式尺寸呈現距離、時間、平均配速與估算熱量，可儲存或用手機分享。</p><button id="downloadStoryCard" class="story-share-button noprint" type="button">下載／分享 PNG</button><p class="story-privacy">分享卡只含摘要數據，不包含路線或座標。</p></div>
+  </section>
   <div class="stats">
     <div><span>累積距離</span><strong id="statDistance">0.00</strong><small>km</small></div>
     <div><span>運動時間</span><strong id="statTime">00:00</strong></div>

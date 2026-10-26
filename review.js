@@ -4,6 +4,7 @@
   const MAX_BYTES = 5 * 1024 * 1024;
   let reviewMap = null;
   let layer = null;
+  let activeRecord = null;
 
   const setStatus = text => { $('status').textContent = text; };
   const isNum = v => typeof v === 'number' && Number.isFinite(v);
@@ -91,6 +92,204 @@
     dl.append(dt, dd);
   }
 
+  function updateStoryCard(r, km, sec, kcal) {
+    const date = r.date ? new Date(r.date) : null;
+    $('storyDate').textContent = date && !isNaN(date.getTime())
+      ? date.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) + ' · TRAINING JOURNAL'
+      : 'TRAINING JOURNAL';
+    $('storyDistance').textContent = km.toFixed(2);
+    $('storyTime').textContent = fmtTime(sec);
+    const pace = r.meters > 0 && sec > 0 ? Math.round(sec / (r.meters / 1000)) : null;
+    $('storyPace').textContent = pace == null
+      ? '--:-- / km'
+      : String(Math.floor(pace / 60)).padStart(2, '0') + ':' + String(pace % 60).padStart(2, '0') + ' / km';
+    $('storyKcal').textContent = Math.round(kcal) + ' kcal';
+    $('storyType').textContent = r.demo ? '示範運動' : 'GPS 運動紀錄';
+  }
+
+  function loadStoryBackground() {
+    return new Promise(resolve => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = new URL('assets/campus-run.webp', document.baseURI).href;
+      if (image.complete) resolve(image.naturalWidth ? image : null);
+    });
+  }
+
+  function roundedRect(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  async function createStoryImage(r) {
+    const width = 1080, height = 1920;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('此瀏覽器無法建立分享圖片。');
+
+    ctx.fillStyle = '#17213a';
+    ctx.fillRect(0, 0, width, height);
+    const image = await loadStoryBackground();
+    if (image) {
+      const scale = Math.max(width / image.width, height / image.height);
+      const imageWidth = image.width * scale, imageHeight = image.height * scale;
+      ctx.drawImage(image, (width - imageWidth) / 2, (height - imageHeight) / 2, imageWidth, imageHeight);
+    }
+    const shade = ctx.createLinearGradient(0, 0, 0, height);
+    shade.addColorStop(0, '#101725a8');
+    shade.addColorStop(.34, '#10172545');
+    shade.addColorStop(.62, '#101725c2');
+    shade.addColorStop(1, '#101725f5');
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = '#ffffff50';
+    ctx.lineWidth = 2;
+    roundedRect(ctx, 48, 48, width - 96, height - 96, 35);
+    ctx.stroke();
+    const left = 96, right = width - 96;
+    for (let i = 0; i < 5; i++) {
+      roundedRect(ctx, left + i * 177, 74, 166, 5, 3);
+      ctx.fillStyle = '#ffffff9e';
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 34px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('PACE', left, 145);
+    const date = r.date ? new Date(r.date) : null;
+    const dateLabel = date && !isNaN(date.getTime())
+      ? date.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) + '  ·  TRAINING JOURNAL'
+      : 'TRAINING JOURNAL';
+    ctx.font = '500 22px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffffffd9';
+    ctx.fillText(dateLabel, right, 145, 620);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#ffffffd9';
+    ctx.font = '600 25px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('PACE  /  TRAINING JOURNAL', left, 565);
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 68px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('今天的每一步', left, 660);
+
+    const distanceText = (r.meters / 1000).toFixed(2);
+    let distanceFont = 178;
+    ctx.font = '500 ' + distanceFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    while (ctx.measureText(distanceText).width > 760 && distanceFont > 100) {
+      distanceFont -= 8;
+      ctx.font = '500 ' + distanceFont + 'px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    }
+    const distanceWidth = ctx.measureText(distanceText).width;
+    const distanceY = 865;
+    ctx.fillStyle = '#fff';
+    ctx.fillText(distanceText, left, distanceY);
+    ctx.fillStyle = '#ffafc2';
+    ctx.font = '800 36px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('KM', left + distanceWidth + 20, distanceY - 8);
+    ctx.fillStyle = '#ffffffd9';
+    ctx.font = '500 22px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('ONE STEP CLOSER TO YOURSELF.', left + 4, 925);
+
+    const panelX = 96, panelY = 1115, panelWidth = 888, panelHeight = 480;
+    roundedRect(ctx, panelX, panelY, panelWidth, panelHeight, 34);
+    ctx.fillStyle = '#08101dcc';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff55';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    const rows = [
+      ['運動時間', fmtTime(r.seconds)],
+      ['平均配速', $('storyPace').textContent],
+      ['估算熱量', $('storyKcal').textContent]
+    ];
+    rows.forEach(([label, value], index) => {
+      const rowY = panelY + 105 + index * 138;
+      if (index) {
+        ctx.strokeStyle = '#ffffff35';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(panelX + 42, rowY - 47);
+        ctx.lineTo(panelX + panelWidth - 42, rowY - 47);
+        ctx.stroke();
+      }
+      ctx.font = '500 25px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+      ctx.fillStyle = '#ffffffa8';
+      ctx.fillText(label, panelX + 42, rowY);
+      ctx.font = '600 34px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'right';
+      ctx.fillText(value, panelX + panelWidth - 42, rowY, 500);
+      ctx.textAlign = 'left';
+    });
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 27px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('PACE', left, 1745);
+    ctx.font = '500 21px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillStyle = '#ffffffc9';
+    ctx.fillText(r.demo ? '示範運動紀錄' : '校園 GPS 運動紀錄', left + 130, 1745);
+    ctx.fillStyle = '#ffafc2';
+    ctx.font = '600 17px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('MOVE WITH INTENTION', right, 1745);
+    ctx.textAlign = 'left';
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('分享圖片輸出失敗。')), 'image/png');
+    });
+  }
+
+  async function exportStoryCard(r) {
+    const button = $('downloadStoryCard');
+    button.disabled = true;
+    button.textContent = '正在製作分享卡…';
+    setStatus('正在製作不含路線座標的分享卡。');
+    try {
+      const blob = await createStoryImage(r);
+      const time = r.date && !isNaN(new Date(r.date).getTime()) ? new Date(r.date).toISOString().slice(0, 10) : 'record';
+      const filename = 'pace-story-' + time + '.png';
+      const file = typeof File === 'function' ? new File([blob], filename, { type: 'image/png' }) : null;
+      if (file && navigator.share && typeof navigator.canShare === 'function') {
+        try {
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'PACE 運動分享卡' });
+            setStatus('分享卡已送到系統分享選單。');
+            return;
+          }
+        } catch (error) {
+          if (error && error.name === 'AbortError') { setStatus('已取消分享。'); return; }
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setStatus('分享卡已下載。');
+    } catch (error) {
+      setStatus(error && error.message ? error.message : '分享卡製作失敗，請再試一次。');
+    } finally {
+      button.disabled = false;
+      button.textContent = '下載／分享 PNG';
+    }
+  }
+
   function showFacts(r) {
     const km = r.meters / 1000, sec = r.seconds;
     const speed = sec > 0 ? km / (sec / 3600) : 0;
@@ -100,6 +299,7 @@
     $('statTime').textContent = fmtTime(sec);
     $('statSpeed').textContent = speed.toFixed(1);
     $('statKcal').textContent = String(Math.round(kcal));
+    updateStoryCard(r, km, sec, kcal);
 
     const dl = $('facts');
     dl.replaceChildren();
@@ -127,6 +327,7 @@
   }
 
   function showList(rows, name) {
+    activeRecord = null;
     const head = rows[0], body = rows.slice(1);
     const distIdx = head.indexOf('距離 m');
     const kcalIdx = head.indexOf('總熱量 kcal');
@@ -161,6 +362,7 @@
       let r;
       try { r = JSON.parse(text); } catch { setStatus(f.name + ' 不是有效的 JSON 檔。'); return; }
       if (!validTrack(r)) { setStatus(f.name + ' 不是 PACE 的軌跡 JSON。請用「運動紀錄」的「軌跡」按鈕下載。'); return; }
+      activeRecord = r;
       showTrack(r);
       showFacts(r);
       $('detail').hidden = false;
@@ -174,6 +376,7 @@
   }
 
   $('file').addEventListener('change', e => handleFiles(e.target.files));
+  $('downloadStoryCard').addEventListener('click', () => { if (activeRecord) exportStoryCard(activeRecord); });
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
