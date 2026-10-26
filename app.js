@@ -118,15 +118,6 @@ renderHistory();render();if('serviceWorker'in navigator)navigator.serviceWorker.
 
 document.querySelectorAll('.sidenav a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.sidenav a').forEach(n=>n.classList.toggle('active',n===a));document.querySelector('.breadcrumb strong').textContent=a.textContent.trim();}));
 
-const presentationToggle=$('presentationToggle');
-if(presentationToggle)presentationToggle.onclick=()=>{
-  const active=document.body.classList.toggle('presentation-mode');
-  presentationToggle.setAttribute('aria-pressed',String(active));
-  presentationToggle.textContent=active?'離開展示':'簡報展示';
-  $('presentationNote').hidden=!active;
-  if(active)window.scrollTo({top:0,behavior:'smooth'});
-};
-
 const REPORT_PROFILE_KEY='pace-presentation-profile-v1';
 const THEME_NAMES=['ocean','sunset','forest','violet','custom'];
 const THEME_ACCENTS={ocean:'#ff684f',sunset:'#ffb24d',forest:'#55d6a0',violet:'#c29bff'};
@@ -159,8 +150,8 @@ function applySiteTheme(){
   if(route&&routeColor)route.setStyle({color:routeColor});
 }
 function renderReportProfile(){
-  $('reporterNameDisplay').textContent=reportProfile.name;
-  $('reporterByline').hidden=!reportProfile.name;
+  $('runnerNameDisplay').textContent=reportProfile.name;
+  $('runnerByline').hidden=!reportProfile.name;
   applySiteTheme();
 }
 renderReportProfile();
@@ -168,7 +159,7 @@ $('openReportSettings').onclick=()=>{
   $('siteThemeInput').value=reportProfile.theme;
   $('customAccentInput').value=reportProfile.accent;
   $('customAccentLabel').hidden=reportProfile.theme!=='custom';
-  $('presenterNameInput').value=reportProfile.name;
+  $('runnerNameInput').value=reportProfile.name;
   $('reportSettingsStatus').textContent='';
   $('reportSettingsDialog').showModal();
 };
@@ -180,7 +171,7 @@ $('siteThemeInput').onchange=()=>{
 $('closeReportSettings').onclick=()=>$('reportSettingsDialog').close();
 $('reportSettingsForm').onsubmit=e=>{
   e.preventDefault();
-  reportProfile={theme:$('siteThemeInput').value,accent:$('customAccentInput').value,name:$('presenterNameInput').value.trim().slice(0,30)};
+  reportProfile={theme:$('siteThemeInput').value,accent:$('customAccentInput').value,name:$('runnerNameInput').value.trim().slice(0,30)};
   renderReportProfile();
   try{
     localStorage.setItem(REPORT_PROFILE_KEY,JSON.stringify(reportProfile));

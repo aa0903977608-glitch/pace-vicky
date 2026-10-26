@@ -52,8 +52,9 @@ button,a,input{-webkit-tap-highlight-color:transparent}
 .story-distance{display:flex;align-items:baseline;gap:7px;margin:18px 0 8px;color:#fff}
 .story-distance strong{font-size:clamp(58px,15vw,82px);line-height:1;font-weight:750;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
 .story-distance span{font-size:14px;font-weight:850;color:#ff9a6c}
-.story-route-art{height:70px;margin:0 0 13px;color:#ff684f}
-.story-route-art svg{display:block;width:100%;height:54px;overflow:visible}
+.story-route-art{position:relative;height:74px;margin:0 0 13px;color:#ff684f}
+.story-route-caption{position:absolute;top:0;left:0;color:#ffffffd9;font-size:7px;font-weight:800;letter-spacing:.1em}
+.story-route-art svg{display:block;width:100%;height:44px;margin-top:10px;overflow:visible}
 .story-route-art polyline{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .story-route-art .track-outline{stroke:#ffffffb3;stroke-width:9}
 .story-route-art .track-line{stroke:#ff684f;stroke-width:4}
@@ -123,7 +124,7 @@ th{color:var(--report-muted);font-weight:700;background:#f7f8fb}
       <div class="story-content">
         <div class="story-topline"><strong class="story-logo">PACE <span>／ 校園運動</span></strong><span class="story-date" id="storyDate">2026.10.26</span></div>
         <div class="story-hero"><p class="story-kicker">CAMPUS MOVEMENT</p><h3 class="story-title">今日運動紀錄</h3><p class="story-tagline">每一步，都是進度。</p><p class="story-distance"><strong id="storyDistance">0.00</strong><span>KM</span></p></div>
-        <div class="story-route-art" aria-hidden="true"><svg viewBox="0 0 300 80" preserveAspectRatio="xMidYMid meet"><g id="storyRoutePaths"></g></svg><div class="story-route-legend"><span><i></i>起點</span><span><i></i>終點</span></div></div>
+        <div class="story-route-art" aria-hidden="true"><span class="story-route-caption">跑者實際軌跡</span><svg viewBox="0 0 300 80" preserveAspectRatio="xMidYMid meet"><g id="storyRoutePaths"></g></svg><div class="story-route-legend"><span><i></i>起點</span><span><i></i>終點</span></div></div>
         <div class="story-stat-panel" aria-label="分享卡摘要數據">
           <div class="story-stat-row"><span>運動時間</span><strong id="storyTime">00:00</strong></div>
           <div class="story-stat-row"><span>平均配速</span><strong id="storyPace">--:-- / km</strong></div>

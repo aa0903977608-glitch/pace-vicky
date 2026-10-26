@@ -310,7 +310,7 @@
 
     ctx.fillStyle = muted;
     ctx.font = '700 18px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('GPS TRACK', left, 875);
+    ctx.fillText('跑者實際軌跡', left, 875);
     ctx.fillStyle = blue;
     ctx.beginPath();
     ctx.arc(right - 183, 868, 8, 0, Math.PI * 2);
