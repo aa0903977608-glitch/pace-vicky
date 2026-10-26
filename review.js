@@ -209,6 +209,16 @@
     }
   }
 
+  function loadStoryBackground() {
+    return new Promise(resolve => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = new URL('assets/campus-run.webp', document.baseURI).href;
+      if (image.complete) resolve(image.naturalWidth ? image : null);
+    });
+  }
+
   async function createStoryImage(r) {
     const width = 1080, height = 1920;
     const canvas = document.createElement('canvas');
@@ -217,19 +227,34 @@
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('此瀏覽器無法建立分享圖片。');
 
-    const ink = '#17213a', muted = '#6b7890', blue = '#405ad9', coral = '#d95432';
-    ctx.fillStyle = '#f2f4fa';
+    const ink = '#fff', muted = '#ffffffc9', blue = '#9ee6d3', coral = '#ff684f';
+    ctx.fillStyle = '#111a2b';
     ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = '#e5eaff';
-    ctx.beginPath();
-    ctx.arc(1045, 480, 235, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffe6df';
-    ctx.beginPath();
-    ctx.arc(48, 1515, 185, 0, Math.PI * 2);
-    ctx.fill();
+    const image = await loadStoryBackground();
+    if (image) {
+      const scale = Math.max(width / image.width, height / image.height);
+      const imageWidth = image.width * scale, imageHeight = image.height * scale;
+      const focus = .68;
+      ctx.drawImage(image, (width - imageWidth) * focus, (height - imageHeight) / 2, imageWidth, imageHeight);
+    }
+    const leftShade = ctx.createLinearGradient(0, 0, width, 0);
+    leftShade.addColorStop(0, '#101725d9');
+    leftShade.addColorStop(.48, '#10172585');
+    leftShade.addColorStop(1, '#10172512');
+    ctx.fillStyle = leftShade;
+    ctx.fillRect(0, 0, width, height);
+    const bottomShade = ctx.createLinearGradient(0, height * .46, 0, height);
+    bottomShade.addColorStop(0, '#10172500');
+    bottomShade.addColorStop(1, '#101725ed');
+    ctx.fillStyle = bottomShade;
+    ctx.fillRect(0, 0, width, height);
+    const topShade = ctx.createLinearGradient(0, 0, 0, 260);
+    topShade.addColorStop(0, '#10172580');
+    topShade.addColorStop(1, '#10172500');
+    ctx.fillStyle = topShade;
+    ctx.fillRect(0, 0, width, 260);
     const left = 96, right = width - 96;
-    ctx.strokeStyle = '#dfe5f0';
+    ctx.strokeStyle = '#ffffff70';
     ctx.lineWidth = 2;
     roundedRect(ctx, 48, 48, width - 96, height - 96, 35);
     ctx.stroke();
@@ -239,32 +264,32 @@
     ctx.fillText('PACE', left, 142);
     ctx.font = '600 20px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillStyle = muted;
-    ctx.fillText('/ MOVEMENT LOG', 220, 142);
+    ctx.fillText('/ CAMPUS MOVEMENT', 220, 142);
     const date = r.date ? new Date(r.date) : null;
     const dateLabel = date && !isNaN(date.getTime())
       ? date.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.')
       : 'PACE';
     roundedRect(ctx, 760, 92, 224, 68, 34);
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#1017258c';
     ctx.fill();
-    ctx.strokeStyle = '#dfe5f0';
+    ctx.strokeStyle = '#ffffff75';
     ctx.stroke();
     ctx.font = '700 21px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = blue;
+    ctx.fillStyle = ink;
     ctx.fillText(dateLabel, 872, 135, 194);
     ctx.textAlign = 'left';
 
     ctx.fillStyle = coral;
     ctx.font = '800 23px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('DAILY MOVEMENT / 01', left, 375);
+    ctx.fillText('CAMPUS MOVEMENT', left, 375);
     ctx.fillStyle = ink;
     ctx.font = '800 78px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('今日累積', left, 480);
+    ctx.fillText('今日運動紀錄', left, 480);
     ctx.fillStyle = muted;
     ctx.font = '500 27px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillText('每一步，都是進度。', left, 535);
-    ctx.fillStyle = blue;
+    ctx.fillStyle = '#ffffffd9';
     ctx.font = '800 20px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
     ctx.fillText('DISTANCE', left, 645);
 
@@ -285,7 +310,7 @@
 
     ctx.fillStyle = muted;
     ctx.font = '700 18px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText('RECORDED TRACK', left, 875);
+    ctx.fillText('GPS TRACK', left, 875);
     ctx.fillStyle = blue;
     ctx.beginPath();
     ctx.arc(right - 183, 868, 8, 0, Math.PI * 2);
@@ -313,7 +338,7 @@
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 16;
       ctx.stroke();
-      ctx.strokeStyle = blue;
+      ctx.strokeStyle = coral;
       ctx.lineWidth = 7;
       ctx.stroke();
     }
@@ -341,22 +366,22 @@
       const x = left + (index % 2) * (tileWidth + gap);
       const y = tileY + Math.floor(index / 2) * (tileHeight + 25);
       roundedRect(ctx, x, y, tileWidth, tileHeight, 24);
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = '#101725c9';
       ctx.fill();
-      ctx.strokeStyle = '#dfe5f0';
+      ctx.strokeStyle = '#ffffff55';
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.fillStyle = coral;
       ctx.fillRect(x + 24, y + 27, 8, 34);
-      ctx.fillStyle = muted;
+      ctx.fillStyle = '#ffffffc9';
       ctx.font = '600 22px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
       ctx.fillText(label, x + 50, y + 52);
-      ctx.fillStyle = ink;
+      ctx.fillStyle = '#fff';
       ctx.font = '800 31px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
       ctx.fillText(value, x + 25, y + 118, tileWidth - 50);
     });
 
-    ctx.strokeStyle = '#dfe5f0';
+    ctx.strokeStyle = '#ffffff70';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(left, 1512);
